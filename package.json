@@ -1,12 +1,13 @@
 {
-  "name": "my-project",
-  "version": "0.1.0",
+  "name": "rahma-health",
+  "version": "1.0.0",
   "private": true,
-  "packageManager": "pnpm@12.3.4",
+  "description": "منصة رحمة الذكية للتمريض والإسعاف والرعاية الصحية المنزلية في جمهورية مصر العربية",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

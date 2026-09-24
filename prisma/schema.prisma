@@ -1,0 +1,134 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String           @id @default(uuid())
+  name         String
+  phone        String           @unique
+  email        String?          @unique
+  passwordHash String?          @map("password_hash")
+  role         String           @default("patient") // 'patient' | 'nurse' | 'admin'
+  governorate  String
+  area         String
+  address      String?
+  latitude     Float?
+  longitude    Float?
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  
+  nurseProfile Nurse?
+  sessions     SessionBooking[]
+  records      MedicalRecord[]
+
+  @@map("users")
+}
+
+model Nurse {
+  id                     String             @id @default(uuid())
+  userId                 String?            @unique @map("user_id")
+  name                   String
+  gender                 String             // 'male' | 'female'
+  title                  String
+  bio                    String?
+  specialties            String[]
+  governorate            String
+  area                   String
+  coverageGovernorates   String[]           @map("coverage_governorates")
+  latitude               Float?
+  longitude              Float?
+  rating                 Float              @default(5.0)
+  reviewsCount           Int                @default(0) @map("reviews_count")
+  experienceYears        Int                @default(1) @map("experience_years")
+  verified               Boolean            @default(true)
+  available              Boolean            @default(true)
+  
+  // Financial Engine
+  initialWelcomeCredit   Float              @default(100.0) @map("initial_welcome_credit")
+  walletBalance          Float              @default(100.0) @map("wallet_balance")
+  completedSessionsCount Int                @default(0) @map("completed_sessions_count")
+  totalCommissionDeducted Float             @default(0.0) @map("total_commission_deducted")
+  createdAt              DateTime           @default(now()) @map("created_at")
+
+  user                   User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions               SessionBooking[]
+  transactions           WalletTransaction[]
+
+  @@map("nurses")
+}
+
+model SessionBooking {
+  id                 String              @id @default(uuid())
+  patientId          String?             @map("patient_id")
+  patientName        String              @map("patient_name")
+  patientPhone       String              @map("patient_phone")
+  nurseId            String              @map("nurse_id")
+  nurseName          String              @map("nurse_name")
+  serviceId          String              @map("service_id")
+  serviceTitle       String              @map("service_title")
+  bookingDate        String              @map("booking_date")
+  bookingTime        String              @map("booking_time")
+  status             String              @default("confirmed")
+  governorate        String
+  area               String
+  address            String
+  latitude           Float?
+  longitude          Float?
+  completionCode     String              @map("completion_code") // 4-Digit OTP
+  arrivalConfirmed   Boolean             @default(false) @map("arrival_confirmed")
+  arrivedAt          DateTime?           @map("arrived_at")
+  paymentMethod      String              @default("cash") @map("payment_method")
+  platformCommission Float               @default(10.0) @map("platform_commission")
+  commissionDeducted Boolean             @default(false) @map("commission_deducted")
+  completedAt        DateTime?           @map("completed_at")
+  confirmedAt        DateTime?           @map("confirmed_at")
+  nurseNotes         String?             @map("nurse_notes")
+  vitalBp            String?             @map("vital_bp")
+  vitalPulse         String?             @map("vital_pulse")
+  vitalTemp          String?             @map("vital_temp")
+  createdAt          DateTime            @default(now()) @map("created_at")
+
+  patient            User?               @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  nurse              Nurse               @relation(fields: [nurseId], references: [id], onDelete: Restrict)
+  transactions       WalletTransaction[]
+
+  @@map("session_bookings")
+}
+
+model WalletTransaction {
+  id           String          @id @default(uuid())
+  nurseId      String          @map("nurse_id")
+  type         String          // 'welcome_credit' | 'session_commission_deduction' | 'admin_credit'
+  amount       Float
+  description  String
+  sessionId    String?         @map("session_id")
+  balanceAfter Float           @map("balance_after")
+  createdAt    DateTime        @default(now()) @map("created_at")
+
+  nurse        Nurse           @relation(fields: [nurseId], references: [id], onDelete: Cascade)
+  session      SessionBooking? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@map("wallet_transactions")
+}
+
+model MedicalRecord {
+  id            String   @id @default(uuid())
+  patientId     String   @map("patient_id")
+  title         String
+  recordType    String   @map("record_type")
+  recordDate    String   @map("record_date")
+  encryptedData String?  @map("encrypted_data")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  patient       User     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("medical_records")
+}
