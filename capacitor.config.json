@@ -1,10 +1,10 @@
 {
   "appId": "com.rahma.health",
   "appName": "رحمة",
-  "webDir": "out",
+  "webDir": "public",
   "bundledWebRuntime": false,
   "server": {
-    "url": "https://rahma-health.com",
+    "url": "https://51bb414b6661f683-156-222-64-240.serveousercontent.com",
     "cleartext": true
   },
   "android": {
@@ -13,10 +13,5 @@
   },
   "ios": {
     "backgroundColor": "#0f5fbe"
-  },
-  "plugins": {
-    "Geolocation": {
-      "permissions": ["location"]
-    }
   }
 }
