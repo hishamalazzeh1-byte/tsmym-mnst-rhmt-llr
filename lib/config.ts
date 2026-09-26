@@ -31,8 +31,9 @@ export const APP_CONFIG = {
     paymentModel: 'cash_to_nurse',
   },
 
-  // رابط الخادم الذي يحوي قاعدة البيانات الحقيقية
-  backendUrl: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000',
+  // وجهة الخادم: تُستهلك من جهة الخادم فقط (وسيط Next.js في next.config.mjs).
+  // المتصفح لا يتصل بها مباشرة — يستدعي /api/v1/... على نفس النطاق.
+  backendUrl: process.env.BACKEND_ORIGIN || 'http://localhost:5000',
 
   // إعدادات قواعد البيانات والتكامل
   database: {

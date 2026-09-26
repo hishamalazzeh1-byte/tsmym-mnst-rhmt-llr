@@ -1,0 +1,18 @@
+﻿[1] ╪º┘ä┘à┘é╪º╪▒┘å╪⌐ ╪º┘ä┘à╪¿╪º╪┤╪▒╪⌐
+    http://localhost:5000/api/v1/health  ->  200  online
+    http://localhost:3000/api/v1/health ->  404  error
+
+[2] ╪º┘ä╪¬╪¡┘é┘é ┘à┘å ╪º┘ä┘à╪▒┘ê╪▒ ╪╣╪¿╪▒ ╪º┘ä┘ê╪│┘è╪╖
+    ╪º┘ä╪«╪º╪»┘à ┘à╪¿╪º╪┤╪▒╪⌐ : ┘è╪╣┘à┘ä
+    ╪╣╪¿╪▒ ╪º┘ä┘ê╪│┘è╪╖    : ┘ü╪┤┘ä
+
+[3] ┘à╪│╪º╪▒╪º╪¬ ╪ú╪«╪▒┘ë ╪╣╪¿╪▒ ╪º┘ä┘ê╪│┘è╪╖
+    /api/v1/nurses         -> 404  {"status":"error","code":404,"message":"Application not found","request_id":"zAAIYbk2QDKEk7oA63j4Ww"}
+    /api/v1/auth/me        -> 404  {"status":"error","code":404,"message":"Application not found","request_id":"fId8bzg7RL21Hd--5nX1uw"}
+    /api/v1/sessions       -> 404  {"status":"error","code":404,"message":"Application not found","request_id":"f-1g7baUQyiTqZdFw9P4nw"}
+    POST /api/v1/triage   -> 404  urgency=undefined
+
+[4] ╪╡┘ü╪¡╪⌐ ╪º┘ä┘ê╪º╪¼┘ç╪⌐ (╪¿╪╣╪» ╪Ñ╪¡┘à╪º╪í)
+    /              -> 200  106661 ╪¿╪º┘è╪¬  ╪│┘ä┘è┘à╪⌐
+    /nurses        -> 200  30883 ╪¿╪º┘è╪¬  ╪│┘ä┘è┘à╪⌐
+    /auth/login    -> 200  22921 ╪¿╪º┘è╪¬  ╪│┘ä┘è┘à╪⌐

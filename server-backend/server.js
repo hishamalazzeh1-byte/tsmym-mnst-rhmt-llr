@@ -1,6 +1,9 @@
-require('dotenv').config()
-const fs = require('fs')
+// نُحمّل .env الخاص بالخادم صراحةً بغض النظر عن مجلد التشغيل.
+// dotenv الافتراضي يقرأ من process.cwd()، فتشغيل الخادم من جذر المشروع
+// كان يقرأ .env الجذري (قيم NEXT_PUBLIC_* فقط) فيفشل بـ INVALID_ENVIRONMENT.
 const path = require('path')
+require('dotenv').config({ path: path.join(__dirname, '.env') })
+const fs = require('fs')
 const crypto = require('crypto')
 const express = require('express')
 const cors = require('cors')

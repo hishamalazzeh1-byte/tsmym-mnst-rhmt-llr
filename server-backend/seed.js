@@ -1,6 +1,8 @@
 // تعبئة قاعدة البيانات بحسابات جاهزة للتجربة المحلية
 // التشغيل:  npm run seed   (لا يحتاج الخادم أن يكون يعمل)
-require('dotenv').config()
+// تحميل .env الخاص بالخادم (وليس جذر المشروع) — مهم عند التشغيل من أي مجلد
+const path = require('path')
+require('dotenv').config({ path: path.join(__dirname, '.env') })
 const { UsersDB, NursesDB, WalletsDB, OtpDB } = require('./db')
 
 const ACCOUNTS = [

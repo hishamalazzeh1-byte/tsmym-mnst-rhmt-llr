@@ -6,7 +6,7 @@
 // ==============================================================================
 const fs = require('fs')
 const path = require('path')
-require('dotenv').config()
+require('dotenv').config({ path: path.join(__dirname, '.env') })
 
 const SCHEMA_PATH = path.join(__dirname, '..', 'schema.sql')
 const checkOnly = process.argv.includes('--check')

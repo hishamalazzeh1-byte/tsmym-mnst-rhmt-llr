@@ -1,4 +1,18 @@
-export const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000'
+/**
+ * مسار الـ API نسبي عمداً.
+ *
+ * كان سابقاً رابطاً مطلقاً مع fallback إلى localhost، وهو سبب خطأ
+ * "Failed to fetch" في الإنتاج: المتصفح يحاول الوصول إلى localhost
+ * الجهاز الزائر (أو نطاق وهمي محروق في الحزمة).
+ *
+ * الآن المتصفح يستدعي /api/v1/... على نفس النطاق، وNext.js يمرّره
+ * من جهة الخادم إلى الخادم الحقيقي (انظر rewrites في next.config.mjs).
+ * النتيجة: لا CORS، ولا نطاق مثبّت، ولا إعادة بناء عند تغيّر العنوان.
+ */
+export const API_BASE = '/api/v1'
+
+// للتشخيص فقط
+export const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '(عبر وسيط Next.js)'
 
 export class ApiError extends Error {
   status: number
@@ -30,7 +44,21 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     headers.set('Authorization', `Bearer ${token}`)
   }
 
-  const res = await fetch(`${BACKEND_URL}${path}`, { ...init, headers })
+  // كل المستدعين يمرّرون المسار كاملاً ('/api/v1/...').
+  // ندعم أيضاً مساراً نسبياً ('/nurses') بإضافة البادئة عند الحاجة.
+  const url = path.startsWith('/') ? path : `${API_BASE}/${path}`
+
+  let res: Response
+  try {
+    res = await fetch(url, { ...init, headers })
+  } catch {
+    // "Failed to fetch" الخام لا يوضّح شيئاً للمستخدم.
+    throw new ApiError(
+      'تعذر الاتصال بالخادم. تأكد من تشغيل الخادم الخلفي، ومن ضبط BACKEND_ORIGIN في Vercel.',
+      0,
+    )
+  }
+
   let data: any = null
   try {
     data = await res.json()
@@ -38,7 +66,7 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     data = null
   }
   if (!res.ok) {
-    throw new ApiError(data?.error || data?.message || 'تعذر تنفيذ الطلب', res.status)
+    throw new ApiError(data?.error || data?.message || `تعذر تنفيذ الطلب (${res.status})`, res.status)
   }
   return data as T
 }

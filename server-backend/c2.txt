@@ -1,0 +1,10 @@
+﻿project ref : glkjngkpuruqfzxlmmgw
+password    : 16 chars
+in .env     : ┘à╪╣┘ä┘æ┘é (┘à╪╣╪╖┘æ┘ä)
+
+[1] ╪º┘ä╪º╪¬╪╡╪º┘ä ╪º┘ä┘à╪¿╪º╪┤╪▒
+    DNS : ENOTFOUND
+    ┘å╪¬┘è╪¼╪⌐: FAIL ENOTFOUND getaddrinfo ENOTFOUND db.glkjngkpuruqfzxlmmgw.supabase.co
+
+[2] Session Pooler
+    ┘ä╪º ┘å╪¬┘è╪¼╪⌐ ΓÇö ╪º┘ä┘Ç Pooler ╪║┘è╪▒ ┘à┘ü╪╣┘æ┘ä ╪ú┘ê ┘â┘ä┘à╪⌐ ╪º┘ä┘à╪▒┘ê╪▒ ╪║┘è╪▒ ╪╡╪¡┘è╪¡╪⌐
