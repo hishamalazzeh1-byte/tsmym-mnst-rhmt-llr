@@ -1,5 +1,6 @@
 import { Button as ButtonPrimitive } from '@base-ui/react/button'
 import { cva, type VariantProps } from 'class-variance-authority'
+import * as React from 'react'
 
 import { cn } from '@/lib/utils'
 
@@ -40,19 +41,46 @@ const buttonVariants = cva(
   },
 )
 
+type ButtonProps = ButtonPrimitive.Props &
+  VariantProps<typeof buttonVariants> & {
+    /**
+     * عندtrue يتم دمج الزر مع العنصر الأب (مثل <Link>) بدلاً من إنشاء <button> جديد.
+     * مثال: <Button asChild><Link href="/nurses">تصفح</Link></Button>
+     */
+    asChild?: boolean
+  }
+
 function Button({
   className,
   variant = 'default',
   size = 'default',
+  asChild = false,
+  children,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonProps) {
+  if (asChild && React.isValidElement(children)) {
+    const child = children as React.ReactElement<Record<string, unknown>>
+    return React.cloneElement(child, {
+      ...props,
+      ...child.props,
+      className: cn(
+        buttonVariants({ variant, size }),
+        className,
+        child.props.className as string | undefined,
+      ),
+      'data-slot': 'button',
+    } as Record<string, unknown>)
+  }
+
   return (
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {children}
+    </ButtonPrimitive>
   )
 }
 
-export { Button, buttonVariants }
+export { Button, buttonVariants, type ButtonProps }

@@ -1,21 +1,74 @@
-# v0 sandbox internal files
+# ==============================================================================
+# الأسرار — لا تُرفع أبداً
+# ==============================================================================
+# ملفات البيئة الحقيقية (تحوي كلمات مرور وأسرار)
+.env
+.env.local
+.env.*.local
+server-backend/.env
+server-backend/.env.local
+server-backend/.env.*.local
+
+# ما يُرفع: النماذج المرجعية بلا أسرار
+!.env.example
+!server-backend/.env.example
+# ملاحظة: .env.production يُرفع عمداً — محتواه NEXT_PUBLIC_* فقط
+#         وهي عامة بالتصميم (تُحرق في حزمة العميل). لا تضع فيه أسرار!
+
+# مفتاح توقيع Android — إن رُفع فقد لا تستطيع نشر أي تحديث للتطبيق لاحقاً
+# احتفظ بنسخة احتياطية آمنة منه خارج المستودع
+*.keystore
+*.jks
+android/app/*.keystore
+android/app/*.jks
+
+# ==============================================================================
+# بيانات التشغيل — تحتوي حسابات ومحافظ وأكواد
+# ==============================================================================
+server-backend/data/
+server-backend/e2e-result.txt
+server-backend/*.log
+*.log
+
+# ==============================================================================
+# مخرجات البناء
+# ==============================================================================
+node_modules/
+.next/
+out/
+.vercel/
+dist/
+build/
+tsconfig.tsbuildinfo
+.DS_Store
+
+# ==============================================================================
+# Android / Capacitor
+# ==============================================================================
+*.apk
+*.aab
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/.idea/
+android/captures/
+.externalNativeBuild/
+.cxx/
+
+# حزمة Capacitor — تُولَّد بـ `npm run build && npx cap sync`
+# حزمة قديمة تحتوي شيفرة قديمة (بيانات تجريبية) وتُشحن داخل التطبيق
+android/app/src/main/assets/public/
+
+# ملفات بيئة Capacitor المحلية
+android/app/capacitor.settings.gradle
+android/app/capacitor.build.gradle
+
+# ==============================================================================
+# v0 sandbox
+# ==============================================================================
 __v0_runtime_loader.js
 __v0_devtools.tsx
 __v0_jsx-dev-runtime.ts
 .snowflake/
 .v0-trash/
-.vercel/
-
-# Environment variables
-.env*.local
-
-# Common ignores
-node_modules
-.next/
-.DS_Store
-.vercel
-*.apk
-android/app/build/
-android/build/
-android/.gradle/
-android/local.properties

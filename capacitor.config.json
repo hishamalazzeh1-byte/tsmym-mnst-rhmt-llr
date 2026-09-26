@@ -1,17 +1,37 @@
 {
   "appId": "com.rahma.health",
   "appName": "رحمة",
-  "webDir": "public",
+  "webDir": "out",
   "bundledWebRuntime": false,
   "server": {
-    "url": "https://51bb414b6661f683-156-222-64-240.serveousercontent.com",
-    "cleartext": true
+    "//": "الإنتاج: التطبيق يخدم من نطاق HTTPS المنشور — لا حزم محلية. هذا يعني أن أي تحديث على الويب يصل للمستخدمين فوراً دون إصدار جديد.",
+    "url": "https://rahma-health.com",
+    "cleartext": false,
+    "androidScheme": "https"
   },
   "android": {
-    "allowMixedContent": true,
-    "backgroundColor": "#0f5fbe"
+    "//": "allowMixedContent=false يمنع تحميل موارد HTTP داخل WebView الآمن (HTTPS). لا تفعّله في الإنتاج.",
+    "allowMixedContent": false,
+    "backgroundColor": "#FFFFFF",
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
   },
   "ios": {
-    "backgroundColor": "#0f5fbe"
+    "backgroundColor": "#FFFFFF",
+    "contentInset": "always",
+    "limitsNavigationsToAppBoundDomains": true,
+    "captureInput": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1000,
+      "launchAutoHide": true,
+      "backgroundColor": "#FFFFFF",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_INSIDE",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": true
+    }
   }
 }

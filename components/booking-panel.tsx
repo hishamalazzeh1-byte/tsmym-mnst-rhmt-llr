@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { serviceTitle } from '@/lib/data'
+import { createNewSession } from '@/lib/app-state'
 import type { Coordinates, Nurse } from '@/lib/types'
 
 const TIMES = ['زيارة فورية الآن (عاجلة)', '09:00 ص', '11:00 ص', '01:00 م', '03:00 م', '05:00 م', '07:00 م']
@@ -50,7 +51,9 @@ export function BookingPanel({ nurse }: { nurse: Nurse }) {
   const [patientPhone, setPatientPhone] = useState('')
   const [notes, setNotes] = useState('')
   const [done, setDone] = useState(false)
-  const [completionCode] = useState(() => Math.floor(1000 + Math.random() * 9000).toString())
+  const [completionCode, setCompletionCode] = useState('')
+  const [submitError, setSubmitError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   const ready = patientName.trim().length > 2 && patientPhone.trim().length >= 10 && location.address.trim().length > 2
 
@@ -193,7 +196,7 @@ export function BookingPanel({ nurse }: { nurse: Nurse }) {
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">التوقيت</Label>
-          <Select value={time} onValueChange={setTime}>
+          <Select value={time} onValueChange={(v: string | null) => setTime(v ?? TIMES[0])}>
             <SelectTrigger className="h-9 text-xs font-semibold">
               <SelectValue placeholder="اختر الموعد" />
             </SelectTrigger>
@@ -238,14 +241,41 @@ export function BookingPanel({ nurse }: { nurse: Nurse }) {
         />
       </div>
 
+      {submitError && <p className="text-xs text-destructive">{submitError}</p>}
       <div className="pt-1">
         <Button
           className="w-full font-bold text-sm"
           size="lg"
-          disabled={!ready}
-          onClick={() => setDone(true)}
+          disabled={!ready || submitting}
+          onClick={async () => {
+            setSubmitError('')
+            setSubmitting(true)
+            try {
+              const created = await createNewSession({
+                nurseId: nurse.id,
+                nurseName: nurse.name,
+                service: serviceTitle(service),
+                serviceId: service,
+                patientName: patientName,
+                patientPhone: patientPhone,
+                date: date,
+                time: time,
+                governorate: location.governorate,
+                area: location.area,
+                address: location.address,
+                coordinates: location.coordinates,
+                notes,
+              })
+              setCompletionCode(created.completionCode)
+              setDone(true)
+            } catch (err) {
+              setSubmitError(err instanceof Error ? err.message : 'تعذر إنشاء الحجز. سجّل الدخول أولاً.')
+            } finally {
+              setSubmitting(false)
+            }
+          }}
         >
-          طلب الممرض والتحرك لموقعي الآن
+          {submitting ? 'جاري حفظ الطلب...' : 'طلب الممرض والتحرك لموقعي الآن'}
         </Button>
       </div>
 

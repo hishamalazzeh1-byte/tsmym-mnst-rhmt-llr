@@ -23,10 +23,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { SESSION_STATUS_MAP } from '@/lib/data'
+import { patchSession } from '@/lib/app-state'
 import {
   PLATFORM_COMMISSION_PER_SESSION,
   type SessionBooking,
-  type SessionStatus,
 } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -42,93 +42,66 @@ export function SessionTracker({
   userRole = 'patient',
 }: SessionTrackerProps) {
   const [session, setSession] = useState<SessionBooking>(initialSession)
-  const [activeRole, setActiveRole] = useState<'patient' | 'nurse' | 'admin'>(userRole)
+  const [activeRole] = useState<'patient' | 'nurse' | 'admin'>(userRole)
   const [enteredCode, setEnteredCode] = useState('')
   const [codeError, setCodeError] = useState('')
+  const [busy, setBusy] = useState(false)
   const [nurseNotesInput, setNurseNotesInput] = useState(session.nurseNotes || '')
-  const [nurseBp, setNurseBp] = useState(session.vitalSigns?.bloodPressure || '120/80')
-  const [nursePulse, setNursePulse] = useState(session.vitalSigns?.pulse || '75')
-  const [nurseTemp, setNurseTemp] = useState(session.vitalSigns?.temperature || '37.0')
+  // لا قيم افتراضية مزعومة — الممرض يدخل القياسات بنفسه
+  const [nurseBp, setNurseBp] = useState(session.vitalSigns?.bloodPressure || '')
+  const [nursePulse, setNursePulse] = useState(session.vitalSigns?.pulse || '')
+  const [nurseTemp, setNurseTemp] = useState(session.vitalSigns?.temperature || '')
   const [confirmationBanner, setConfirmationBanner] = useState(
     session.status === 'confirmed_completed',
   )
 
   const statusInfo = SESSION_STATUS_MAP[session.status] || SESSION_STATUS_MAP.pending
 
-  function updateStatus(nextStatus: SessionStatus, extra: Partial<SessionBooking> = {}) {
-    const updated: SessionBooking = {
-      ...session,
-      status: nextStatus,
-      ...extra,
-    }
-    setSession(updated)
-    onSessionUpdated?.(updated)
-    if (nextStatus === 'confirmed_completed') {
-      setConfirmationBanner(true)
+  async function runAction(action: string, extra: Record<string, unknown> = {}) {
+    setBusy(true)
+    setCodeError('')
+    try {
+      const updated = await patchSession(session.id, action, extra)
+      setSession(updated)
+      onSessionUpdated?.(updated)
+      if (updated.status === 'confirmed_completed') setConfirmationBanner(true)
+    } catch (err) {
+      setCodeError(err instanceof Error ? err.message : 'تعذر تحديث الجلسة')
+    } finally {
+      setBusy(false)
     }
   }
 
-  // 1. الممرض في الطريق
   function handleNurseStartTrip() {
-    updateStatus('nurse_en_route', {
-      nurseNotes: 'الممرض في الطريق إلى موقع الزيارة التمريضية عبر إحداثيات GPS.',
-    })
+    void runAction('start_trip')
   }
 
-  // 2. تأكيد وصول الممرض إلى الموقع الجغرافي
   function handleNurseArrived() {
-    const now = new Date().toLocaleTimeString('ar-EG', {
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-    updateStatus('nurse_arrived', {
-      arrivalConfirmed: true,
-      arrivedAt: `اليوم ${now}`,
-      nurseNotes: 'تم تأكيد وصول الممرض إلى موقع المريض وبدء التجهيز للرعاية.',
-    })
+    void runAction('confirm_arrival')
   }
 
-  // 3. بدء الجلسة
   function handleStartCare() {
-    updateStatus('in_progress', {
-      nurseNotes: 'بدأ الممرض في تقديم الرعاية التمريضية المطلوبة للمريض.',
-    })
+    void runAction('start_care')
   }
 
-  // 4. إنهاء الجلسة من جانب الممرض وطلب رمز التحقق
   function handleNurseComplete() {
-    const now = new Date().toLocaleTimeString('ar-EG', {
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-    updateStatus('completed_by_nurse', {
-      completedAt: `اليوم ${now}`,
-      nurseNotes: nurseNotesInput || 'تم إتمام الرعاية التمريضية المطلوبة بنجاح وفحص المؤشرات الحيوية.',
+    void runAction('nurse_complete', {
+      nurseNotes: nurseNotesInput,
       vitalSigns: {
         bloodPressure: nurseBp,
-        pulse: `${nursePulse} نبضة/د`,
-        temperature: `${nurseTemp} °م`,
+        pulse: nursePulse,
+        temperature: nurseTemp,
       },
     })
   }
 
-  // 5. تأكيد الإتمام برمز التحقق OTP وخصم عمولة الـ 10 ج.م
-  function handleConfirmCompletion(isCodeVerification = false) {
-    if (isCodeVerification && enteredCode.trim() !== session.completionCode) {
-      setCodeError('رمز التحقق غير صحيح، يرجى كتابة الرمز المكون من 4 أرقام بدقة.')
+  function handleConfirmCompletion() {
+    if (enteredCode.trim().length !== 4) {
+      setCodeError('أدخل رمز التحقق المكوّن من 4 أرقام الذي سلّمه لك المريض')
       return
     }
-
-    setCodeError('')
-    const now = new Date().toLocaleTimeString('ar-EG', {
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-
-    updateStatus('confirmed_completed', {
-      confirmedAt: `اليوم ${now}`,
-      commissionDeducted: true, // خصم عمولة المنصة (10 جنيه)
-    })
+    // الخادم هو الوحيد الذي يتحقق من الرمز ويخصم العمولة — لا يوجد تجاوز من العميل
+    void runAction('verify_otp', { code: enteredCode.trim() })
   }
 
   const steps = [
@@ -146,51 +119,9 @@ export function SessionTracker({
 
   return (
     <div className="space-y-6">
-      {/* Role Switcher for preview & testing */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/80 bg-muted/40 p-3">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <User className="size-4 text-primary" />
-          <span>معاينة الواجهة بدور:</span>
-        </div>
-        <div className="flex rounded-xl bg-background p-1 ring-1 ring-border">
-          <button
-            type="button"
-            onClick={() => setActiveRole('patient')}
-            className={cn(
-              'rounded-lg px-3 py-1 text-xs font-semibold transition-all',
-              activeRole === 'patient'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            المريض / الأسرة
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveRole('nurse')}
-            className={cn(
-              'rounded-lg px-3 py-1 text-xs font-semibold transition-all',
-              activeRole === 'nurse'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            الممرض
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveRole('admin')}
-            className={cn(
-              'rounded-lg px-3 py-1 text-xs font-semibold transition-all',
-              activeRole === 'admin'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            إدارة المنصة
-          </button>
-        </div>
-      </div>
+      {codeError && (
+        <p className="text-sm font-semibold text-destructive">{codeError}</p>
+      )}
 
       {/* Main Status Header Card */}
       <Card className="overflow-hidden border-border/80 shadow-xs">
@@ -433,6 +364,7 @@ export function SessionTracker({
                 {session.status === 'confirmed' && (
                   <Button
                     onClick={handleNurseStartTrip}
+                    disabled={busy}
                     className="w-full gap-2 font-bold"
                     size="lg"
                   >
@@ -527,15 +459,20 @@ export function SessionTracker({
                     <div className="flex gap-2 pt-1">
                       <Input
                         value={enteredCode}
-                        onChange={(e) => setEnteredCode(e.target.value)}
+                        onChange={(e) =>
+                          setEnteredCode(e.target.value.replace(/\D/g, '').slice(0, 4))
+                        }
                         placeholder="أدخل رمز التحقق (4 أرقام)"
+                        inputMode="numeric"
                         maxLength={4}
-                        className="h-9 font-mono text-center tracking-widest bg-background text-sm"
+                        dir="ltr"
+                        className="h-9 bg-background text-center font-mono text-sm tracking-widest"
                       />
                       <Button
                         size="sm"
-                        onClick={() => handleConfirmCompletion(true)}
-                        className="font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={handleConfirmCompletion}
+                        disabled={busy}
+                        className="bg-white font-bold text-emerald-700 hover:bg-emerald-50"
                       >
                         تحقق وتأكيد الجلسة
                       </Button>
@@ -584,24 +521,17 @@ export function SessionTracker({
                 </div>
 
                 {session.status === 'completed_by_nurse' ? (
-                  <div className="space-y-3 rounded-xl border border-emerald-500/30 bg-background p-4">
+                  <div className="space-y-3 rounded-xl border border-amber-500/30 bg-background p-4">
                     <div className="space-y-1">
-                      <h4 className="font-bold text-sm text-foreground flex items-center gap-1.5">
-                        <CheckCircle2 className="size-4 text-emerald-600" />
-                        سجّل الممرض إنهاء الجلسة التمريضية بنجاح
+                      <h4 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                        <Clock className="size-4 text-amber-600" />
+                        بانتظار تأكيد الممرض بالرمز
                       </h4>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        زوّد الممرض برمز التحقق ({session.completionCode}) أو اضغط زر التأكيد أدناه لتوثيق تلقيك الخدمة بنجاح وضمان حقوق الطرفين.
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        سلّم للممرض رمز التحقق ليؤكد إنهاء الجلسة. عمولة المنصة تُخصم تلقائياً من رصيده
+                        عند إدخال الرمز.
                       </p>
                     </div>
-
-                    <Button
-                      onClick={() => handleConfirmCompletion(false)}
-                      className="w-full gap-2 font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
-                      size="lg"
-                    >
-                      <CheckCircle2 className="size-5" /> أؤكد إتمام الجلسة واستلام الرعاية بنجاح
-                    </Button>
                   </div>
                 ) : session.status === 'confirmed_completed' ? (
                   <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 p-3 text-xs font-semibold text-emerald-800 dark:text-emerald-200">
@@ -623,30 +553,32 @@ export function SessionTracker({
                 <div className="flex items-center justify-between">
                   <Badge variant="secondary">لوحة رقابة إدارة منصة رحمة</Badge>
                   <span className="text-xs font-mono">
-                    رمز التحقق السري: {session.completionCode}
+                    رمز التحقق: <span className="font-bold text-primary">{session.completionCode}</span>
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  يمكن لمسؤولي المنصة حل النزاعات وتأكيد إتمام الجلسة رسمياً وخصم الـ 10 جنيه عمولة التطبيق من رصيد الممرض.
+                  لا يمكن تجاوز رمز التحقق. يتم توثيق الجلسة فقط عند إدخال الرمز الصحيح، وعندها تُخصم عمولة
+                  المنصة من رصيد الممرض فعلياً في قاعدة البيانات.
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    value={enteredCode}
+                    onChange={(e) => setEnteredCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    placeholder="رمز التحقق (4 أرقام)"
+                    inputMode="numeric"
+                    maxLength={4}
+                    dir="ltr"
+                    className="h-9 w-44 bg-background text-center font-mono tracking-widest"
+                  />
                   {session.status !== 'confirmed_completed' && (
                     <Button
                       size="sm"
-                      onClick={() => handleConfirmCompletion(false)}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                      onClick={handleConfirmCompletion}
+                      disabled={busy}
+                      className="bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
                     >
-                      <CheckCircle2 className="size-3.5 mr-1" />
-                      تأكيد إداري رسمي وخصم الـ 10 ج.م
-                    </Button>
-                  )}
-                  {!session.arrivalConfirmed && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleNurseArrived}
-                    >
-                      تأكيد وصول يدوي
+                      <CheckCircle2 className="mr-1 size-3.5" />
+                      تأكيد إداري رسمي
                     </Button>
                   )}
                 </div>

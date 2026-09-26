@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   ArrowLeft,
   ArrowRight,
@@ -16,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+import { apiRegister, apiSendOtp } from '@/lib/auth-session'
 
 type Role = 'patient' | 'nurse'
 
@@ -25,13 +27,47 @@ const STEPS_BY_ROLE: Record<Role, string[]> = {
 }
 
 export function RegisterForm() {
+  const router = useRouter()
   const [step, setStep] = useState(0)
   const [role, setRole] = useState<Role | null>(null)
   const [nationalId, setNationalId] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [password, setPassword] = useState('')
+  const [nurseNationalId, setNurseNationalId] = useState('')
+  const [syndicate, setSyndicate] = useState('')
+  const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   const steps = role ? STEPS_BY_ROLE[role] : STEPS_BY_ROLE.patient
   const isLast = step === steps.length - 1
   const nationalIdValid = /^\d{14}$/.test(nationalId)
+
+  async function handleCompleteRegistration() {
+    setError('')
+    setSubmitting(true)
+    const res = await apiRegister({
+      firstName,
+      lastName,
+      phone,
+      password,
+      role,
+      nationalId: role === 'nurse' ? nurseNationalId : nationalId,
+      syndicateNumber: syndicate,
+    })
+    setSubmitting(false)
+    if (!res.success) {
+      setError(res.message || 'تعذر إنشاء الحساب')
+      return
+    }
+    const otp = await apiSendOtp(phone.replace(/\D/g, ''))
+    if (!otp.success) {
+      router.push('/auth/login')
+      return
+    }
+    router.push(role === 'nurse' ? '/auth/pending' : '/auth/login')
+  }
 
   return (
     <div className="space-y-6">
@@ -84,20 +120,38 @@ export function RegisterForm() {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="fname">الاسم الأول</Label>
-              <Input id="fname" placeholder="أحمد" />
+              <Input
+                id="fname"
+                placeholder="أحمد"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="lname">الاسم الأخير</Label>
-              <Input id="lname" placeholder="محمد" />
+              <Input
+                id="lname"
+                placeholder="محمد"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+              />
             </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="phone2">رقم الهاتف</Label>
-            <Input id="phone2" type="tel" inputMode="tel" placeholder="01xxxxxxxxx" dir="ltr" />
+            <Input
+              id="phone2"
+              type="tel"
+              inputMode="tel"
+              placeholder="01xxxxxxxxx"
+              dir="ltr"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="pass2">كلمة المرور</Label>
-            <Input id="pass2" type="password" placeholder="••••••••" dir="ltr" />
+            <Input id="pass2" type="password" placeholder="••••••••" dir="ltr" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
         </div>
       )}
@@ -140,11 +194,11 @@ export function RegisterForm() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="nid2">الرقم القومي</Label>
-            <Input id="nid2" inputMode="numeric" maxLength={14} placeholder="2xxxxxxxxxxxxx" dir="ltr" />
+            <Input id="nid2" inputMode="numeric" maxLength={14} placeholder="2xxxxxxxxxxxxx" dir="ltr" value={nurseNationalId} onChange={(e) => setNurseNationalId(e.target.value.replace(/\D/g, ''))} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="syndicate">رقم كارنيه النقابة</Label>
-            <Input id="syndicate" placeholder="رقم القيد بنقابة التمريض" dir="ltr" />
+            <Input id="syndicate" placeholder="رقم القيد بنقابة التمريض" dir="ltr" value={syndicate} onChange={(e) => setSyndicate(e.target.value)} />
           </div>
           <UploadField label="صورة بطاقة الرقم القومي" />
           <UploadField label="كارنيه نقابة التمريض" />
@@ -158,17 +212,21 @@ export function RegisterForm() {
             <ArrowRight className="size-4" /> السابق
           </Button>
         )}
+        {error && <p className="text-sm text-destructive">{error}</p>}
         {isLast ? (
-          <Button asChild className="flex-1" size="lg" disabled={role === 'patient' && !nationalIdValid}>
-            <Link href={role === 'nurse' ? '/auth/pending' : '/dashboard'}>
-              {role === 'nurse' ? 'إرسال للمراجعة' : 'إنشاء الحساب'}
-            </Link>
+          <Button
+            className="flex-1"
+            size="lg"
+            disabled={submitting || (role === 'patient' && !nationalIdValid) || (role === 'nurse' && (!/^\d{14}$/.test(nurseNationalId) || !syndicate))}
+            onClick={handleCompleteRegistration}
+          >
+            {submitting ? 'جاري الحفظ...' : role === 'nurse' ? 'إنشاء حساب الممرض' : 'إنشاء الحساب'}
           </Button>
         ) : (
           <Button
             className="flex-1"
             size="lg"
-            disabled={step === 0 && !role}
+            disabled={step === 0 && !role || (step === 1 && (!firstName || !lastName || phone.replace(/\D/g, '').length < 11 || password.length < 6))}
             onClick={() => setStep((s) => s + 1)}
           >
             التالي <ArrowLeft className="size-4" />

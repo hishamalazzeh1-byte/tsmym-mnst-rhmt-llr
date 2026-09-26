@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { apiRequest } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { serviceTitle } from '@/lib/data'
 
@@ -69,20 +70,33 @@ export function TriageChecker() {
   const [result, setResult] = useState<TriageResult | null>(null)
 
   async function submit() {
+    if (!symptoms.trim()) {
+      setError('اكتب الأعراض أولاً')
+      return
+    }
     setLoading(true)
     setError('')
     setResult(null)
     try {
-      const res = await fetch('/api/triage', {
+      // الطلب يذهب إلى الخادم الحقيقي الذي يملك قواعد الفرز (لا API محلي وهمي)
+      // نرسل كل التفاصيل السريرية التي يجمعها النموذج ليُبنى عليها التقييم
+      const data = await apiRequest<TriageResult>('/api/v1/triage', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symptoms, age, gender, duration, history }),
+        body: JSON.stringify({
+          symptoms: symptoms.trim(),
+          age: age.trim() || null,
+          gender: gender || null,
+          duration: duration.trim() || null,
+          history: history.trim() || null,
+        }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'حدث خطأ')
       setResult(data)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'حدث خطأ غير متوقع')
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? `تعذر الوصول لخادم الفرز الطبي: ${err.message}`
+          : 'تعذر الوصول لخادم الفرز الطبي. تحقق من تشغيل الخادم.',
+      )
     } finally {
       setLoading(false)
     }
@@ -128,7 +142,7 @@ export function TriageChecker() {
             </div>
             <div className="space-y-1.5">
               <Label>النوع</Label>
-              <Select value={gender} onValueChange={setGender}>
+              <Select value={gender} onValueChange={(v: string | null) => setGender(v ?? '')}>
                 <SelectTrigger>
                   <SelectValue placeholder="اختر" />
                 </SelectTrigger>

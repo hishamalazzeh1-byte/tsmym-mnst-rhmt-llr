@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { APP_CONFIG } from '@/lib/config'
-import { NURSES, SERVICES } from '@/lib/data'
+
+export const dynamic = 'force-static'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = APP_CONFIG.url
@@ -39,13 +40,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ]
 
-  // 2. Dynamic Nurse Profile Pages
-  const nursePages: MetadataRoute.Sitemap = NURSES.map((nurse) => ({
-    url: `${baseUrl}/nurses/${nurse.id}`,
-    lastModified: new Date(),
-    changeFrequency: 'weekly',
-    priority: 0.85,
-  }))
-
-  return [...staticPages, ...nursePages]
+  return staticPages
 }

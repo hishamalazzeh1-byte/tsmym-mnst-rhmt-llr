@@ -19,16 +19,24 @@ export const APP_CONFIG = {
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@rahma-health.com',
   officialAmbulanceNumber: '123',
 
-  // النظام المالي والعمولات
+  // النظام المالي والعمولات — مصدر واحد للحقيقة (متغيرات البيئة)
+  // تُقرأ القيم من الخادم في كل عملية حسابية؛ هذه مجرد نسخة للعرض
   financial: {
-    platformCommissionPerSession: 10, // عمولة المنصة الثابتة (10 جنيه مصري) لكل جلسة منتهية
-    nurseInitialWelcomeCredit: 100, // رصيد مبدئي ترحيبي لكل ممرض جديد (100 جنيه = 10 جلسات)
-    freeSessionsInitialQuota: 10, // عدد الجلسات المتاحة بالرصيد المبدئي
-    paymentModel: 'cash_to_nurse', // الممرض يحصل على قيمة الجلسة كاش مباشرة باليد من المريض
+    platformCommissionPerSession: Number(
+      process.env.NEXT_PUBLIC_PLATFORM_COMMISSION || 10,
+    ),
+    nurseInitialWelcomeCredit: Number(
+      process.env.NEXT_PUBLIC_NURSE_INITIAL_CREDIT || 100,
+    ),
+    paymentModel: 'cash_to_nurse',
   },
+
+  // رابط الخادم الذي يحوي قاعدة البيانات الحقيقية
+  backendUrl: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000',
 
   // إعدادات قواعد البيانات والتكامل
   database: {
-    url: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/rahma_db',
+    engine: 'file-json',
+    directory: process.env.RAHMA_DATA_DIR || 'server-backend/data',
   },
 } as const

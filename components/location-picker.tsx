@@ -151,9 +151,10 @@ export function LocationPicker({
           <span className="text-xs text-muted-foreground">المحافظة</span>
           <Select
             value={gov}
-            onValueChange={(val) => {
-              setGov(val)
-              handleUpdate(val, area, address, coords)
+            onValueChange={(val: string | null) => {
+              const next = val ?? ''
+              setGov(next)
+              handleUpdate(next, area, address, coords)
             }}
           >
             <SelectTrigger className="h-9 bg-background text-sm">

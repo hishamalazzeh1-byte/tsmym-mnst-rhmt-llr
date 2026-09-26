@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { MapPin, Search, SlidersHorizontal } from 'lucide-react'
 import { NurseCard } from '@/components/nurse-card'
 import { Input } from '@/components/ui/input'
@@ -13,22 +14,33 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { GOVERNORATES, NURSES, SERVICES } from '@/lib/data'
-import type { ServiceId } from '@/lib/types'
+import { fetchNurses } from '@/lib/app-state'
+import { GOVERNORATES, SERVICES } from '@/lib/data'
+import type { Nurse, ServiceId } from '@/lib/types'
 
 export function NursesBrowser({
   initialService,
 }: {
   initialService?: string
 }) {
+  const searchParams = useSearchParams()
+  const paramService = searchParams.get('service')
   const [query, setQuery] = useState('')
-  const [service, setService] = useState<string>(initialService ?? 'all')
+  const [service, setService] = useState<string>(initialService ?? paramService ?? 'all')
   const [gov, setGov] = useState<string>('all')
   const [sort, setSort] = useState<string>('rating')
   const [onlyAvailable, setOnlyAvailable] = useState(false)
+  const [nurses, setNurses] = useState<Nurse[]>([])
+  const [loadError, setLoadError] = useState('')
+
+  useEffect(() => {
+    fetchNurses()
+      .then(setNurses)
+      .catch((err) => setLoadError(err instanceof Error ? err.message : 'تعذر تحميل الممرضين من الخادم'))
+  }, [])
 
   const results = useMemo(() => {
-    let list = NURSES.filter((n) => {
+    let list = nurses.filter((n) => {
       if (query && !n.name.includes(query) && !n.title.includes(query)) return false
       if (service !== 'all' && !n.specialties.includes(service as ServiceId)) return false
       if (gov !== 'all' && n.governorate !== gov && !n.coverageGovernorates?.includes(gov)) return false
@@ -41,7 +53,7 @@ export function NursesBrowser({
       return b.rating - a.rating
     })
     return list
-  }, [query, service, gov, sort, onlyAvailable])
+  }, [nurses, query, service, gov, sort, onlyAvailable])
 
   return (
     <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
@@ -68,7 +80,10 @@ export function NursesBrowser({
 
             <div className="space-y-1.5">
               <Label>الخدمة</Label>
-              <Select value={service} onValueChange={setService}>
+              <Select
+                value={service}
+                onValueChange={(v: string | null) => setService(v ?? 'all')}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -87,7 +102,7 @@ export function NursesBrowser({
               <Label className="flex items-center gap-1">
                 <MapPin className="size-3.5 text-primary" /> المحافظة
               </Label>
-              <Select value={gov} onValueChange={setGov}>
+              <Select value={gov} onValueChange={(v: string | null) => setGov(v ?? 'all')}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -104,7 +119,7 @@ export function NursesBrowser({
 
             <div className="space-y-1.5">
               <Label>الترتيب حسب</Label>
-              <Select value={sort} onValueChange={setSort}>
+              <Select value={sort} onValueChange={(v: string | null) => setSort(v ?? 'rating')}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -131,6 +146,7 @@ export function NursesBrowser({
       </aside>
 
       <div>
+        {loadError && <p className="mb-4 text-sm text-destructive">{loadError}</p>}
         <p className="mb-4 text-sm text-muted-foreground">
           {results.length} ممرض معتمد متاح
         </p>
