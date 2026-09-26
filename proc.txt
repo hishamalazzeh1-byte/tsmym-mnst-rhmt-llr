@@ -1,8 +1,0 @@
-﻿
-
-ProcessId   : 29464
-Name        : node.exe
-CommandLine : "C:\Program Files\nodejs\node.exe" node_modules/next/dist/bin/next start 
-
-
-
